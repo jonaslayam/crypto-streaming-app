@@ -1,0 +1,19 @@
+# --- Secrets ---
+.env
+*.pem
+*.key
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+build/
+dist/
+
+# --- Docker & OS ---
+.DS_Store
+.docker/
+*.log

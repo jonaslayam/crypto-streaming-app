@@ -1,0 +1,111 @@
+version: "3.9"
+
+# Common logging configuration to save disk space
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+    container_name: redpanda
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      - redpanda start
+      - --smp 1 
+      - --memory 2G 
+      - --overprovisioned
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://${BROKER_EXTERNAL_IP}:19092
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 3G
+    networks:
+      - streaming-net
+    ports:
+      - "127.0.0.1:19092:19092"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "info"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  console:
+    restart: unless-stopped
+    image: docker.redpanda.com/redpandadata/console:v2.7.2
+    container_name: redpanda-console
+    logging: *default-logging
+    environment:
+      KAFKA_BROKERS: "redpanda:9092"
+    networks:
+      - streaming-net
+    ports:
+      - "127.0.0.1:8082:8080"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+
+  flink-jobmanager:
+    image: flink:1.20
+    container_name: flink-jobmanager
+    restart: unless-stopped
+    logging: *default-logging
+    command: jobmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        state.checkpoints.dir: file:///opt/flink/checkpoints
+        state.backend: rocksdb
+    networks:
+      - streaming-net
+    ports:
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - flink-checkpoints:/opt/flink/checkpoints
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  flink-taskmanager:
+    image: flink:1.20
+    container_name: flink-taskmanager
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    command: taskmanager
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 4
+        state.checkpoints.dir: file:///opt/flink/checkpoints
+        state.backend: rocksdb
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 8G
+    networks:
+      - streaming-net
+    volumes:
+      - flink-checkpoints:/opt/flink/checkpoints
+
+volumes:
+  redpanda-data:
+  flink-checkpoints:
+
+networks:
+  streaming-net:
+    driver: bridge
