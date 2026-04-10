@@ -1,7 +1,9 @@
 print("--- [DEBUG] El script ha iniciado correctamente ---")
+print("--- [DEBUG] El script ha iniciado correctamente ---")
 import asyncio
 import logging
 import yaml
+import os
 from pathlib import Path
 from binance import AsyncClient
 
@@ -48,7 +50,9 @@ async def main():
     with open(config_path) as f:
         cfg = Settings(**yaml.safe_load(f))
 
-    producer = KafkaProducer(cfg.kafka.broker)
+    # Permitir override del broker vía variable de entorno para Docker
+    kafka_broker = os.getenv("KAFKA_BROKER", cfg.kafka.broker)
+    producer = KafkaProducer(kafka_broker)
     # 🔥 OBLIGATORIO: Encender el productor asíncrono
     await producer.start() 
 

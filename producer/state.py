@@ -1,10 +1,11 @@
 import redis.asyncio as redis
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 class RedisState:
-    def __init__(self, host: str = 'redis', port: int = 6379):
+    def __init__(self, host: str, port: int = 6379):
         # Usamos un pool para gestionar las conexiones de forma eficiente
         self._redis_pool = redis.ConnectionPool(host=host, port=port, db=0, decode_responses=True)
         self.client = redis.Redis.from_pool(self._redis_pool)
@@ -42,5 +43,8 @@ class RedisState:
         return bool(updated)
 
 # Instancia global para ser usada en toda la aplicación
-# Se conecta a 'redis', el nombre del servicio en docker-compose
-state_manager = RedisState(host='redis')
+# El host se determina por la variable de entorno REDIS_HOST.
+# - En Docker, será 'redis' (definido en docker-compose.yml).
+# - Localmente (WSL), será 'localhost' por defecto.
+redis_host = os.getenv("REDIS_HOST", "localhost")
+state_manager = RedisState(host=redis_host)
