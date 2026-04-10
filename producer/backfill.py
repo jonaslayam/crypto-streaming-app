@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from state import last_seen
+from state import state_manager
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +18,10 @@ async def fetch_symbol_backfill(client, producer, settings, symbol):
         for k in klines:
             event_time = k[0]
 
-            if event_time <= last_seen[symbol]:
+            # Operación atómica: solo si el evento es más nuevo se actualiza y se envía
+            was_updated = await state_manager.update_if_newer(symbol, event_time)
+            if not was_updated:
                 continue
-
-            last_seen[symbol] = event_time
 
             payload = {
                 'symbol': symbol,

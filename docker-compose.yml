@@ -50,6 +50,28 @@ services:
       redpanda:
         condition: service_healthy
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - streaming-net
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   flink-jobmanager:
     image: flink:1.20
     container_name: flink-jobmanager
@@ -103,6 +125,7 @@ services:
 volumes:
   redpanda-data:
   flink-checkpoints:
+  redis-data:
 
 networks:
   streaming-net:

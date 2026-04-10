@@ -9,7 +9,7 @@ from config import Settings
 from producer import KafkaProducer
 from ws_client import websocket_loop
 from backfill import backfill_loop
-from state import last_seen
+from state import state_manager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -23,13 +23,10 @@ async def queue_to_kafka_worker(queue, producer):
             symbol = msg['symbol']
             event_time = msg['event_time']
 
-            current_limit = last_seen.get(symbol, 0)
-
-            # 🔥 clave: deduplicación + orden lógico
-            if event_time <= current_limit:
+            # Operación atómica con Redis para evitar race conditions
+            was_updated = await state_manager.update_if_newer(symbol, event_time)
+            if not was_updated:
                 continue
-
-            last_seen[symbol] = event_time
 
             await producer.send(
                 topic=msg['topic'],
@@ -76,6 +73,9 @@ async def main():
         if 'producer' in locals():
             await producer.stop()
             print("✅ Productor de Kafka detenido.")
+        
+        # 3. Cerramos la conexión con Redis
+        await state_manager.close()
 
 if __name__ == "__main__":
     print("🚀 Entrando al bloque de ejecución principal...")

@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from binance import BinanceSocketManager
-from state import last_seen
 from backfill import backfill_loop
 
 logger = logging.getLogger(__name__)
