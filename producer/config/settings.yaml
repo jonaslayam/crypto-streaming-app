@@ -1,0 +1,21 @@
+app:
+  update_interval_seconds: 2
+  timeframe: "1h"
+  backfill_hours: 72
+
+kafka:
+  broker: "localhost:19092"
+  topic: "binance-raw-prices"
+
+binance:
+  tickers:
+    - "BTCUSDT"
+    - "ETHUSDT"
+    - "SOLUSDT"
+    - "BNBUSDT"
+    - "ADAUSDT"
+    - "XRPUSDT"
+    - "DOTUSDT"
+    - "DOGEUSDT"
+    - "AVAXUSDT"
+    - "LINKUSDT"
