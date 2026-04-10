@@ -102,6 +102,21 @@ services:
       # Damos un margen inicial para que el backfill se complete
       start_period: 5m
 
+  processor:
+    build:
+      context: ./processor
+      dockerfile: Dockerfile
+    container_name: processor
+    restart: unless-stopped
+    logging: *default-logging
+    networks:
+      - streaming-net
+    environment:
+      - KAFKA_BROKER=redpanda:9092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+
   flink-jobmanager:
     image: flink:1.20
     container_name: flink-jobmanager
