@@ -60,7 +60,8 @@ async def websocket_loop(client, queue, producer, settings):
                     await queue.put({
                         'topic': settings.kafka.topic,
                         'symbol': symbol,
-                        'event_time': event_time,
+                        # 🔥 Usamos kline_open_time para la deduplicación, igual que en backfill
+                        'event_time': k['t'],
                         'payload': payload
                     })
 
