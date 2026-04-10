@@ -89,6 +89,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      # Verifica si el productor ha enviado un mensaje en los últimos 70 minutos.
+      # El timeframe es de 1h, así que damos un margen extra para evitar falsos positivos.
+      test: ["CMD-SHELL", "find /tmp/producer_healthy -mmin -70 || exit 1"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      # Damos un margen inicial para que el backfill se complete
+      start_period: 5m
 
   flink-jobmanager:
     image: flink:1.20

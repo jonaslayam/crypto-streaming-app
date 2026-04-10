@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 from aiokafka import AIOKafkaProducer
 
 logger = logging.getLogger(__name__)
@@ -7,6 +8,7 @@ logger = logging.getLogger(__name__)
 class KafkaProducer:
     def __init__(self, broker: str):
         self.broker = broker
+        self.health_file = Path("/tmp/producer_healthy")
         # Creamos la instancia, pero aún no se conecta a la red
         self.producer = AIOKafkaProducer(
             bootstrap_servers=self.broker,
@@ -39,6 +41,8 @@ class KafkaProducer:
                 key=key_bytes,
                 value=value_json
             )
+            # Actualizamos el fichero de healthcheck tras un envío exitoso
+            self.health_file.touch()
 
         except Exception as e:
             logger.error(f"Error enviando a Kafka: {e}")
