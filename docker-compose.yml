@@ -18,6 +18,8 @@ services:
       - --overprovisioned
       - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
       - --advertise-kafka-addr internal://redpanda:9092,external://${BROKER_EXTERNAL_IP}:19092
+      - --set redpanda.auto_create_topics_enabled=true
+      - --set redpanda.default_topic_partitions=4
     deploy:
       resources:
         limits:

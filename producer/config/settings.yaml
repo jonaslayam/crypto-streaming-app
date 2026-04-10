@@ -5,7 +5,7 @@ app:
 
 kafka:
   broker: "localhost:19092"
-  topic: "binance-raw-prices"
+  topic: "crypto-raw"
 
 binance:
   tickers:
