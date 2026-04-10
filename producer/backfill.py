@@ -21,6 +21,7 @@ async def fetch_symbol_backfill(client, producer, settings, symbol):
             # Operación atómica: solo si el evento es más nuevo se actualiza y se envía
             was_updated = await state_manager.update_if_newer(symbol, event_time)
             if not was_updated:
+                logger.debug(f"Vela {symbol} [{event_time}] ya existe en Redis, omitiendo...")
                 continue
 
             payload = {

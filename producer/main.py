@@ -12,7 +12,7 @@ from producer import KafkaProducer
 from ws_client import websocket_loop
 from backfill import backfill_loop
 from state import state_manager
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 async def queue_to_kafka_worker(queue, producer):
