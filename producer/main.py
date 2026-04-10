@@ -24,16 +24,24 @@ async def queue_to_kafka_worker(queue, producer):
         try:
             symbol = msg['symbol']
             event_time = msg['event_time']
+            payload = msg['payload']
+            source = payload.get('source')
 
-            # Operación atómica con Redis para evitar race conditions
-            was_updated = await state_manager.update_if_newer(symbol, event_time)
-            if not was_updated:
-                continue
+            # Para datos en vivo ('live'), enviamos siempre para capturar los updates intra-vela.
+            # Solo actualizamos el estado en Redis para que un futuro backfill no repita esta vela.
+            if source == 'live':
+                await state_manager.update_if_newer(symbol, event_time)
+            else:
+                # Para datos de backfill u otra fuente, mantenemos el filtrado estricto
+                # para no duplicar velas ya procesadas.
+                was_updated = await state_manager.update_if_newer(symbol, event_time)
+                if not was_updated:
+                    continue
 
             await producer.send(
                 topic=msg['topic'],
                 key=symbol,
-                payload=msg['payload']
+                payload=payload
             )
 
         except Exception as e:
