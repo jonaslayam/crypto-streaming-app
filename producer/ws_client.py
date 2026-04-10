@@ -45,13 +45,15 @@ async def websocket_loop(client, queue, producer, settings):
                     payload = {
                         'symbol': symbol,
                         'event_time': event_time,
+                        'kline_open_time': k['t'],
                         'kline_close_time': k['T'],
                         'open': k['o'],
                         'high': k['h'],
                         'low': k['l'],
                         'close': k['c'],
                         'volume': k['v'],
-                        'is_closed': k['x']
+                        'is_closed': k['x'],
+                        'source': 'live'
                     }
 
                     # Metemos a la cola para que el worker lo envíe a Redpanda
