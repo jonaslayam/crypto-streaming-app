@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from pathlib import Path
 from aiokafka import AIOKafkaProducer
 
@@ -30,6 +31,9 @@ class KafkaProducer:
     async def send(self, topic: str, key: str, payload: dict):
         """Envía el mensaje de forma asíncrona"""
         try:
+            # Añadimos timestamp de ingesta para trazabilidad
+            payload['ingest_time'] = int(time.time() * 1000)
+            
             # Serializamos a JSON y enviamos
             value_json = json.dumps(payload).encode("utf-8")
             key_bytes = key.encode("utf-8") if key else None

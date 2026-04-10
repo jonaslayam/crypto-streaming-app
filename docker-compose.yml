@@ -79,6 +79,7 @@ services:
       context: ./producer
       dockerfile: Dockerfile
     container_name: producer
+    command: bash -c "python setup_redpanda.py && python main.py"
     restart: unless-stopped
     logging: *default-logging
     networks:
