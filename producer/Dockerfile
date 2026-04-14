@@ -1,18 +1,18 @@
-# Usamos una imagen base ligera de Python
-FROM python:3.12-slim
+FROM python:3.11-slim
 
-# Establecemos el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copiamos primero el archivo de requisitos para aprovechar la caché de Docker
-COPY requirements.txt .
-
-# Instalamos las dependencias.
-# --no-cache-dir: reduce el tamaño de la imagen final.
+# 1. Copiamos los requerimientos desde la nueva ruta relativa
+COPY producer/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiamos el resto del código de la aplicación al directorio de trabajo
-COPY . .
+# 2. Copiamos el contenido de producer a la raíz de /app
+COPY producer/ .
 
-# Comando por defecto para ejecutar la aplicación cuando el contenedor se inicie
+# 3. COPIA CRÍTICA: Traemos la carpeta database al contenedor
+COPY database/ ./database/
+
+# Creamos el archivo para el healthcheck
+RUN touch /tmp/producer_healthy
+
 CMD ["python", "main.py"]

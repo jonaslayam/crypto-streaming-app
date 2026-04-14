@@ -76,9 +76,11 @@ services:
 
   producer:
     build:
-      context: ./producer
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./producer/Dockerfile
     container_name: producer
+    env_file:
+      - .env
     command: bash -c "python setup_redpanda.py && python main.py"
     restart: unless-stopped
     logging: *default-logging

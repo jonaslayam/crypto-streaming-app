@@ -1,8 +1,11 @@
 import asyncio
 import logging
+import yaml
+from pathlib import Path
 from datetime import datetime, timedelta
 from tqdm import tqdm
 import redis.asyncio as redis
+from config import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +58,7 @@ class SmartDeepBackfill:
     async def get_symbol_status(self, symbol: str) -> str:
         """Obtiene el estado actual de un símbolo."""
         status = await self.redis.get(f'status:{symbol}')
-        return status.decode() if status else None
+        return status if status else None
     
     def determine_start_time(self, symbol: str) -> int:
         """
@@ -228,3 +231,49 @@ async def smart_deep_backfill(client, oracle_manager, settings):
     finally:
         await redis_client.close()
         oracle_manager.close()
+
+async def backfill_monitor_loop(client, oracle_manager, initial_settings):
+    """
+    Bucle perpetuo: Monitor de Integridad y Autodescubrimiento.
+    Revisa huecos cada 30 min y detecta nuevos tickers en el YAML.
+    """
+    logger.info("🕵️ Monitor de Integridad iniciado. Patrullando cada 30 min.")
+    base_path = Path(__file__).resolve().parent
+    config_path = base_path / "config" / "settings.yaml"
+
+    while True:
+        try:
+            # 1. Recargar Configuración (Permite "Hot-Reload" de tickers)
+            with open(config_path) as f:
+                current_cfg = Settings(**yaml.safe_load(f))
+            
+            logger.info(f"🔍 Iniciando patrulla para {len(current_cfg.binance.tickers)} símbolos...")
+
+            # 2. Conectar a Redis y Oracle para esta vuelta
+            redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
+            oracle_manager.connect()
+
+            # 3. Instanciar y procesar
+            backfill = SmartDeepBackfill(client, oracle_manager, current_cfg, redis_client)
+            
+            for symbol in current_cfg.binance.tickers:
+                # Si es nuevo, hará el deep backfill de 2 años. 
+                # Si ya existe, solo llenará el hueco (ej: los 30 min que durmió).
+                await backfill.process_symbol(symbol)
+
+            # 4. Limpieza de sesión
+            await redis_client.close()
+            oracle_manager.close()
+            
+            logger.info("✅ Patrulla completada. Base de datos íntegra.")
+
+        except Exception as e:
+            logger.error(f"❌ Error en el ciclo del Monitor: {e}")
+            # Intentar cerrar conexiones si falló algo
+            try: oracle_manager.close()
+            except: pass
+
+        # 5. Dormir hasta la próxima ronda
+        wait_time = 1800 # 30 minutos
+        logger.info(f"😴 Monitor durmiendo por {wait_time/60:.0f} minutos...")
+        await asyncio.sleep(wait_time)

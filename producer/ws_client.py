@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from binance import BinanceSocketManager
-from backfill import backfill_loop
 
 logger = logging.getLogger(__name__)
 
@@ -13,35 +12,30 @@ async def websocket_loop(client, queue, producer, settings):
 
     while True:
         try:
-            logger.info("📡 Conectando WebSocket...")
+            logger.info("📡 Conectando WebSocket de Binance...")
             
-            # 🔥 Lanzamos el backfill en paralelo
-            asyncio.create_task(backfill_loop(client, producer, settings))
+            # 🛑 ELIMINAMOS: asyncio.create_task(backfill_loop(...))
+            # El backfill ahora lo gestiona el main.py de forma independiente.
             
             async with bm.multiplex_socket(streams) as stream:
                 while True:
                     msg = await stream.recv()
 
-                    # 1. Seguridad: Si el mensaje no tiene 'data', es un saludo o error de Binance
                     if not msg or 'data' not in msg:
                         continue
 
                     data = msg['data']
                     
-                    # 2. Seguridad: Si no hay 'E', es un mensaje de sistema, lo ignoramos
                     if 'E' not in data:
                         continue
 
-                    # 3. Extraemos 'k' (los datos de la vela)
                     k = data.get('k')
                     if not k:
                         continue
 
-                    # --- EXTRACCIÓN CORRECTA ---
                     symbol = data['s']
-                    event_time = data['E']  # ✅ 'E' vive en data, no en k
+                    event_time = data['E'] 
 
-                    # Armamos el payload con el que trabajará Flink después
                     payload = {
                         'symbol': symbol,
                         'event_time': event_time,
@@ -56,15 +50,14 @@ async def websocket_loop(client, queue, producer, settings):
                         'source': 'live'
                     }
 
-                    # Metemos a la cola para que el worker lo envíe a Redpanda
+                    # Enviar a la cola interna para el worker de Kafka
                     await queue.put({
                         'topic': settings.kafka.topic,
                         'symbol': symbol,
-                        # 🔥 Usamos kline_open_time para la deduplicación, igual que en backfill
                         'event_time': k['t'],
                         'payload': payload
                     })
 
         except Exception as e:
-            logger.warning(f"WS error: {e} → retrying in 5s...")
+            logger.warning(f"⚠️ WS error: {e} → reintentando en 5s...")
             await asyncio.sleep(5)

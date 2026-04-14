@@ -11,47 +11,54 @@ logger = logging.getLogger(__name__)
 async def main():
     KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:19092")
     TOPIC_NAME = "crypto-raw"
-    GROUP_ID = "crypto-analytics-v1"
+    GROUP_ID = "crypto-analytics-v2"
 
     consumer = AIOKafkaConsumer(
         TOPIC_NAME,
         bootstrap_servers=KAFKA_BROKER,
-        group_id=GROUP_ID,
-        auto_offset_reset='earliest',
+        group_id="test-latency-" + str(time.time()),
+        auto_offset_reset='latest',
         value_deserializer=lambda m: json.loads(m.decode('utf-8'))
     )
 
-    logger.info("Iniciando consumidor...")
+    logger.info("🚀 Iniciando consumidor de baja latencia...")
     await consumer.start()
-    logger.info(f"Consumidor conectado. Escuchando topic '{TOPIC_NAME}' con group_id '{GROUP_ID}'.")
+    logger.info(f"✅ Conectado a {TOPIC_NAME}. Monitoreando latencia de red...")
 
     try:
         async for msg in consumer:
+            # Timestamp actual en UTC ms
             now_ms = int(time.time() * 1000)
             data = msg.value
             
+            # 1. Extraemos el tiempo del evento (Binance 'E')
+            event_time = data.get('event_time')
+            # 2. Extraemos el tiempo de ingesta (Tu Producer)
             ingest_time = data.get('ingest_time')
-            if ingest_time is None:
-                logger.warning("Mensaje recibido sin 'ingest_time'. Omitiendo cálculo de latencia.")
+
+            if not event_time:
+                logger.warning("Mensaje sin 'event_time'.")
                 continue
 
-            latency_ms = now_ms - ingest_time
+            # Latencia de Red + Pipeline (Desde Binance hasta aquí)
+            total_latency = now_ms - event_time
+            
+            # Latencia Interna (Solo desde tu Producer hasta aquí)
+            # Útil para saber si el cuello de botella es tu internet o tu código
+            internal_latency = now_ms - ingest_time if ingest_time else 0
+
             symbol = data.get('symbol', 'N/A')
             close_price = data.get('close', 'N/A')
-            partition = msg.partition
-
-            print(f"[PARTITION {partition}] {symbol} | Precio: {close_price} | Latencia Total: {latency_ms}ms.")
+            
+            # Formateo limpio para monitoreo
+            print(f"[{symbol}] P: {close_price} | 🛰️ Latencia Red: {total_latency}ms | ⚙️ Latencia Interna: {internal_latency}ms")
             
     finally:
-        logger.info("Cerrando consumidor...")
+        logger.info("🔌 Cerrando consumidor...")
         await consumer.stop()
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logger.info("Proceso interrumpido por el usuario.")
-    except Exception as e:
-        logger.error(f"Error inesperado en el consumidor: {e}")
-        import traceback
-        traceback.print_exc()
+        pass

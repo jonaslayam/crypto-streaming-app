@@ -1,7 +1,8 @@
 app:
   update_interval_seconds: 2
   timeframe: "1h"
-  backfill_hours: 72
+  backfill_days: 730
+  ready_threshold_hours: 1
 
 kafka:
   broker: "localhost:19092"
