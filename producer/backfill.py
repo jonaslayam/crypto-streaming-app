@@ -164,6 +164,7 @@ class SmartDeepBackfill:
                 # Calcular tiempo restante
                 remaining_ms = now_ms - last_ts
                 remaining_days = remaining_ms / (1000 * 3600 * 24)
+                time_diff_hours = remaining_ms / (1000 * 3600)
                 
                 logger.info(
                     f"[{symbol}] Insertadas {inserted} velas | "
@@ -171,23 +172,34 @@ class SmartDeepBackfill:
                     f"Faltan {remaining_days:.1f} días"
                 )
                 
+                # Si no hay velas nuevas y estamos cerca del presente, terminar
+                if inserted == 0 and time_diff_hours < READY_THRESHOLD_HOURS:
+                    logger.info(f"✅ [{symbol}] Alcanzado el presente (diferencia: {time_diff_hours:.2f}h). Finalizando backfill.")
+                    pbar.update(total_time_ms - pbar.n)  # Completar barra
+                    await self.set_symbol_status(symbol, 'READY')
+                    break
+                
                 # Avanzar al siguiente batch
                 current_time = last_ts + 1
                 
                 # Pequeña pausa para no saturar
                 await asyncio.sleep(0.1)
             
-            # Completar barra
+            # Completar barra si no se hizo antes
             pbar.update(total_time_ms - pbar.n)
         
-        # Verificar si llegamos al presente
-        time_diff_hours = (now_ms - current_time) / (1000 * 3600)
-        
-        if time_diff_hours < READY_THRESHOLD_HOURS:
-            await self.set_symbol_status(symbol, 'READY')
-            logger.info(f"✅ [{symbol}] Backfill completado. Total insertado: {total_inserted} velas")
+        # Verificar estado final si no se marcó como READY dentro del bucle
+        current_status = await self.get_symbol_status(symbol)
+        if current_status != 'READY':
+            time_diff_hours = (now_ms - current_time) / (1000 * 3600)
+            
+            if time_diff_hours < READY_THRESHOLD_HOURS:
+                await self.set_symbol_status(symbol, 'READY')
+                logger.info(f"✅ [{symbol}] Backfill completado. Total insertado: {total_inserted} velas")
+            else:
+                logger.warning(f"⚠️  [{symbol}] Backfill incompleto. Diferencia: {time_diff_hours:.1f}h")
         else:
-            logger.warning(f"⚠️  [{symbol}] Backfill incompleto. Diferencia: {time_diff_hours:.1f}h")
+            logger.info(f"✅ [{symbol}] Backfill completado. Total insertado: {total_inserted} velas")
 
 
 async def smart_deep_backfill(client, oracle_manager, settings):
