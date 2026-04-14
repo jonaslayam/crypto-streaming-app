@@ -6,8 +6,8 @@ class OracleManager:
     Gestiona la persistencia de datos en Oracle Autonomous Data Warehouse.
     Optimizado para cargas masivas y conexión TLS sin Wallet.
     """
-    def __init__(self, config):
-        self.config = config
+    def __init__(self, oracle_config):
+        self.oracle_config = oracle_config
         self.connection = None
         # Desactivamos el uso de Thick mode para usar conexión TLS simple (Thin)
         oracledb.init_oracle_client = None 
