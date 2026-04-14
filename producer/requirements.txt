@@ -5,3 +5,4 @@ pydantic==2.6.1
 pydantic-settings==2.1.0
 redis==5.0.4
 websockets==13.1
+tqdm==4.66.1
