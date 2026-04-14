@@ -16,11 +16,11 @@ class OracleManager:
         """Establece la conexión con ADW usando los parámetros de configuración."""
         try:
             self.connection = oracledb.connect(
-                user=self.config.DB_USER,
-                password=self.config.DB_PASSWORD,
-                dsn=self.config.DB_DSN
+                user=self.oracle_config.user,
+                password=self.oracle_config.password,
+                dsn=self.oracle_config.dsn
             )
-            logging.info(f"✅ Conexión establecida con Oracle ADW (Usuario: {self.config.DB_USER})")
+            logging.info(f"✅ Conexión establecida con Oracle ADW (Usuario: {self.oracle_config.user})")
         except oracledb.Error as e:
             logging.error(f"❌ Error crítico al conectar con Oracle: {e}")
             raise
