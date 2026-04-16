@@ -106,14 +106,17 @@ services:
 
   processor:
     build:
-      context: ./processor
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./processor/Dockerfile
     container_name: processor
+    env_file:
+      - .env
     restart: unless-stopped
     logging: *default-logging
     networks:
       - streaming-net
     environment:
+      - PYTHONUNBUFFERED=1
       - KAFKA_BROKER=redpanda:9092
     depends_on:
       redpanda:

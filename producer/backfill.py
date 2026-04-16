@@ -77,14 +77,12 @@ class SmartDeepBackfill:
             return start_ts
     
     async def fetch_and_store_batch(self, symbol: str, start_time: int, end_time: int) -> tuple[int, int]:
-        """
-        Descarga un lote de velas y las almacena en Oracle.
-        Retorna: (número de velas insertadas, último timestamp procesado)
-        """
         await self.wait_for_rate_limit()
         
         try:
-            # Petición a Binance (peso: 1)
+            server_time_res = await self.client.get_server_time()
+            binance_now_ms = server_time_res['serverTime']
+            
             klines = await self.client.get_historical_klines(
                 symbol,
                 self.settings.app.timeframe,
@@ -93,28 +91,32 @@ class SmartDeepBackfill:
                 limit=BATCH_SIZE
             )
             
-            await self.increment_binance_weight(1)
+            await self.increment_binance_weight(2)
             
+            # FIX 1: Si Binance no devuelve NADA (hueco vacío), avanzamos el bloque completo
             if not klines:
-                return 0, start_time
+                return 0, end_time 
             
-            # Preparar datos para inserción masiva
-            # Formato: (SYMBOL, OPEN_TIME_MS, OPEN_PRICE, HIGH_PRICE, LOW_PRICE, CLOSE_PRICE, VOLUME, CLOSE_TIME_MS, SOURCE)
             candles_data = []
-            for k in klines:
-                candles_data.append((
-                    symbol,           # SYMBOL
-                    k[0],            # OPEN_TIME_MS
-                    float(k[1]),     # OPEN_PRICE
-                    float(k[2]),     # HIGH_PRICE
-                    float(k[3]),     # LOW_PRICE
-                    float(k[4]),     # CLOSE_PRICE
-                    float(k[5]),     # VOLUME
-                    k[6],            # CLOSE_TIME_MS
-                    'backfill'       # SOURCE
-                ))
             
-            # Inserción masiva en Oracle (idempotente) - ejecutar en executor para no bloquear el loop
+            for k in klines:
+                close_time_ms = k[6]
+                if close_time_ms < binance_now_ms:
+                    candles_data.append((
+                        symbol, k[0], 
+                        float(k[1]), 
+                        float(k[2]), 
+                        float(k[3]), 
+                        float(k[4]), 
+                        float(k[5]), 
+                        close_time_ms, 
+                        'backfill'       
+                    ))
+            
+            # FIX 2: Llegamos al presente. Solo hay velas abiertas. ¡Adelantar al máximo!
+            if not candles_data:
+                return 0, binance_now_ms 
+            
             loop = asyncio.get_event_loop()
             inserted_count = await loop.run_in_executor(
                 None, 
@@ -122,7 +124,7 @@ class SmartDeepBackfill:
                 candles_data
             )
             
-            last_timestamp = klines[-1][0]
+            last_timestamp = candles_data[-1][1]
             
             return inserted_count, last_timestamp
             
