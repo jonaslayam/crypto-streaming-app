@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import time
+import datetime
 from dotenv import load_dotenv
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +49,8 @@ async def main():
     logger.info("🚀 Iniciando monitor de latencia y persistencia en Oracle ADW...")
     await consumer.start()
     
-    header = f"\n{'MONEDA':<12} | {'PRECIO':>15} | {'RED (ms)':>12} | {'INT (ms)':>10}"
+    # Nueva cabecera con HORA y ESTADO
+    header = f"\n{'HORA LOCAL':<12} | {'MONEDA':<10} | {'PRECIO':>12} | {'RED (ms)':>10} | {'INT (ms)':>10} | {'ESTADO':<10}"
     separator = "-" * len(header)
     
     print(separator)
@@ -72,21 +74,32 @@ async def main():
             if not event_time:
                 continue
 
-            # --- 2. Cálculos de latencia (Lógica Original) ---
+            # Transformar now_ms a una hora legible (HH:MM:SS.mmm)
+            timestamp_str = datetime.datetime.fromtimestamp(now_ms / 1000.0).strftime('%H:%M:%S.%f')[:-3]
+
+            # --- 2. Cálculos de latencia ---
             net_latency = now_ms - event_time
             int_latency = now_ms - ingest_time if ingest_time else 0
 
+            # Indicador visual para la tabla
+            estado_str = "🔴 CERRADA" if is_closed else "🟢 ABIERTA"
+
+            # Nueva línea de log estandarizada
             log_line = (
-                f"{f'[{symbol}]':<12} | "
-                f"{float(close_price):>15.4f} | "
-                f"{net_latency:>12} | "
-                f"{int_latency:>10}"
+                f"{timestamp_str:<12} | "
+                f"{f'[{symbol}]':<10} | "
+                f"{float(close_price):>12.4f} | "
+                f"{net_latency:>10} | "
+                f"{int_latency:>10} | "
+                f"{estado_str:<10}"
             )
             print(log_line)
 
-            # --- 3. Persistencia en Oracle (Si la vela se cerró) ---
+            # --- 3. Persistencia en Oracle ---
             if is_closed:
-                # Preparamos el formato batch que espera OracleManager: (SYMBOL, OPEN_TIME, OPEN, HIGH, LOW, CLOSE, VOL, CLOSE_TIME, SOURCE)
+                # Log explícito para ubicar fácilmente la inserción
+                logger.info(f"💾 Guardando vela CERRADA en Oracle para {symbol} a las {timestamp_str}")
+                
                 candle_payload = [(
                     symbol,
                     data.get('kline_open_time'),
@@ -99,8 +112,6 @@ async def main():
                     "redpanda_live"
                 )]
                 
-                # Ejecutamos en executor para no bloquear el loop de Kafka
-                # insert_candles_batch es síncrono (usa oracledb)
                 loop.run_in_executor(
                     None, 
                     oracle_mgr.insert_candles_batch, 
