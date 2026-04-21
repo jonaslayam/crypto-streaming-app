@@ -150,7 +150,15 @@ class SmartDeepBackfill:
         logger.info(f"🚀 [{symbol}] Iniciando backfill: {total_hours:.1f} horas de datos históricos")
         
         # Barra de progreso
-        with tqdm(total=total_time_ms, desc=f"[{symbol}]", unit="ms", unit_scale=True) as pbar:
+        with tqdm(
+            total=total_time_ms,
+            desc=f"[{symbol}]",
+            unit="ms",
+            unit_scale=True,
+            mininterval=10,
+            force_ascii=True,
+            disable=None
+        ) as pbar:
             current_time = start_time
             total_inserted = 0
             
