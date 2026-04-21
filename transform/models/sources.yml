@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: binance_raw
+    schema: TRADER_DATA
+    tables:
+      - name: CRYPTO_CANDLES_1H

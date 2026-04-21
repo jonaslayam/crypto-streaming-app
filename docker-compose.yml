@@ -153,7 +153,7 @@ services:
     container_name: flink-taskmanager
     restart: unless-stopped
     logging: *default-logging
-    depends_on:
+    depends_on: 
       flink-jobmanager:
         condition: service_healthy
     command: taskmanager

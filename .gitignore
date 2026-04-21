@@ -12,6 +12,7 @@ venv/
 ENV/
 build/
 dist/
+.dbt-env/
 
 # --- Docker & OS ---
 .DS_Store
