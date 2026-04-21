@@ -87,6 +87,7 @@ services:
     networks:
       - streaming-net
     environment:
+      - TZ=America/Santiago
       - REDIS_HOST=redis
       - KAFKA_BROKER=redpanda:9092
     depends_on:
@@ -116,6 +117,7 @@ services:
     networks:
       - streaming-net
     environment:
+      - TZ=America/Santiago
       - PYTHONUNBUFFERED=1
       - KAFKA_BROKER=redpanda:9092
     depends_on:
