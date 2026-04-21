@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import datetime
+import pytz
 from dotenv import load_dotenv
 
 DIRECTORIO_ACTUAL = os.path.dirname(os.path.abspath(__file__))
@@ -16,8 +17,8 @@ from database.oracle_manager import OracleManager
 
 load_dotenv()
 
-# Configuración de logging básica
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configuración de logging para salida limpia (solo mensaje)
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 # Clase auxiliar para la configuración de Oracle (requerida por OracleManager)
@@ -28,6 +29,9 @@ class OracleConfig:
         self.dsn = os.getenv("ORACLE__DSN")
 
 async def main():
+    # Configuración de timezone
+    tz_santiago = pytz.timezone('America/Santiago')
+
     # --- Configuración Kafka ---
     KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:19092")
     TOPIC_NAME = "crypto-raw"
@@ -49,15 +53,13 @@ async def main():
     logger.info("🚀 Iniciando monitor de latencia y persistencia en Oracle ADW...")
     await consumer.start()
     
-    # Nueva cabecera con HORA y ESTADO
-    header = f"\n{'HORA LOCAL':<12} | {'MONEDA':<10} | {'PRECIO':>12} | {'RED (ms)':>10} | {'INT (ms)':>10} | {'ESTADO':<10}"
+    # --- Cabecera de la tabla de Ticks ---
+    header = f"{'HORA LOCAL':<12} | {'MONEDA':<10} | {'PRECIO':>12} | {'RED (ms)':>10} | {'INT (ms)':>10} | {'ESTADO':<10}"
     separator = "-" * len(header)
     
-    print(separator)
-    print(header)
-    print(separator)
-
-    msg_count = 0
+    logger.info(separator)
+    logger.info(header)
+    logger.info(separator)
 
     try:
         async for msg in consumer:
@@ -74,8 +76,8 @@ async def main():
             if not event_time:
                 continue
 
-            # Transformar now_ms a una hora legible (HH:MM:SS.mmm)
-            timestamp_str = datetime.datetime.fromtimestamp(now_ms / 1000.0).strftime('%H:%M:%S.%f')[:-3]
+            # Transformar now_ms a una hora legible (HH:MM:SS.mmm) en timezone de Santiago
+            timestamp_str = datetime.datetime.fromtimestamp(now_ms / 1000.0, tz=tz_santiago).strftime('%H:%M:%S.%f')[:-3]
 
             # --- 2. Cálculos de latencia ---
             net_latency = now_ms - event_time
@@ -93,7 +95,7 @@ async def main():
                 f"{int_latency:>10} | "
                 f"{estado_str:<10}"
             )
-            print(log_line)
+            logger.info(log_line)
 
             # --- 3. Persistencia en Oracle ---
             if is_closed:
@@ -117,13 +119,6 @@ async def main():
                     oracle_mgr.insert_candles_batch, 
                     candle_payload
                 )
-            
-            # Repetir cabecera cada 20 mensajes
-            msg_count += 1
-            if msg_count % 20 == 0:
-                print(separator)
-                print(header)
-                print(separator)
             
     except Exception as e:
         logger.error(f"❌ Error en el procesamiento: {e}")
