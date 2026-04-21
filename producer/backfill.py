@@ -216,9 +216,6 @@ async def smart_deep_backfill(client, oracle_manager, settings):
     redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
     
     try:
-        # Conectar a Oracle
-        oracle_manager.connect()
-        
         # Crear instancia del backfill
         backfill = SmartDeepBackfill(client, oracle_manager, settings, redis_client)
         
@@ -232,7 +229,6 @@ async def smart_deep_backfill(client, oracle_manager, settings):
         
     finally:
         await redis_client.close()
-        oracle_manager.close()
 
 async def backfill_monitor_loop(client, oracle_manager, initial_settings):
     """
@@ -253,7 +249,6 @@ async def backfill_monitor_loop(client, oracle_manager, initial_settings):
 
             # 2. Conectar a Redis y Oracle para esta vuelta
             redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
-            oracle_manager.connect()
 
             # 3. Instanciar y procesar
             backfill = SmartDeepBackfill(client, oracle_manager, current_cfg, redis_client)
@@ -265,15 +260,11 @@ async def backfill_monitor_loop(client, oracle_manager, initial_settings):
 
             # 4. Limpieza de sesión
             await redis_client.close()
-            oracle_manager.close()
             
             logger.info("✅ Patrulla completada. Base de datos íntegra.")
 
         except Exception as e:
             logger.error(f"❌ Error en el ciclo del Monitor: {e}")
-            # Intentar cerrar conexiones si falló algo
-            try: oracle_manager.close()
-            except: pass
 
         # 5. Dormir hasta la próxima ronda
         wait_time = 1800 # 30 minutos
