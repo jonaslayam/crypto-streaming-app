@@ -1,0 +1,57 @@
+v1_swing_xgb_settings
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE DBT_ANALYTICS.ML_XGB_SETTINGS';
+EXCEPTION
+   WHEN OTHERS THEN NULL;
+END;
+
+CREATE TABLE DBT_ANALYTICS.ML_XGB_SETTINGS (
+    setting_name  VARCHAR2(30),
+    setting_value VARCHAR2(4000)
+);
+
+-- Parámetros del motor Oracle (Mayúsculas)
+INSERT INTO DBT_ANALYTICS.ML_XGB_SETTINGS VALUES ('ALGO_NAME', 'ALGO_XGBOOST');
+INSERT INTO DBT_ANALYTICS.ML_XGB_SETTINGS VALUES ('PREP_AUTO', 'ON');
+
+-- Parámetros nativos de XGBoost (Estrictamente en minúsculas)
+INSERT INTO DBT_ANALYTICS.ML_XGB_SETTINGS VALUES ('booster', 'gbtree');
+INSERT INTO DBT_ANALYTICS.ML_XGB_SETTINGS VALUES ('max_depth', '5');
+INSERT INTO DBT_ANALYTICS.ML_XGB_SETTINGS VALUES ('eta', '0.1');
+
+COMMIT;
+
+
+
+BEGIN
+    -- 1. Limpieza
+    BEGIN
+        DBMS_DATA_MINING.DROP_MODEL('SWING_XGB_24H_V1');
+    EXCEPTION
+        WHEN OTHERS THEN NULL; 
+    END;
+
+    -- 2. Entrenamiento
+    DBMS_DATA_MINING.CREATE_MODEL(
+        model_name          => 'SWING_XGB_24H_V1',
+        mining_function     => DBMS_DATA_MINING.REGRESSION,
+        data_table_name     => 'ML_TRAIN_DATA',
+        case_id_column_name => 'TIMESTAMP_CLT',
+        target_column_name  => 'TARGET_RETURN_24H',
+        settings_table_name => 'ML_XGB_SETTINGS' -- <--- El esquema explícito
+    );
+END;
+
+
+SELECT
+    ROUND(AVG(ABS(TARGET_RETURN_24H - PREDICTED_RETURN)), 4) as MAE_ERROR_PCT,
+    ROUND(SQRT(AVG(POWER(TARGET_RETURN_24H - PREDICTED_RETURN, 2))), 4) as RMSE_ERROR_PCT
+FROM (
+    SELECT 
+        TARGET_RETURN_24H,
+        PREDICTION(SWING_XGB_24H_V1 USING *) as PREDICTED_RETURN
+    FROM DBT_ANALYTICS.ML_TEST_DATA
+    WHERE TARGET_RETURN_24H IS NOT NULL
+);
+
+
