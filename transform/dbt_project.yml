@@ -34,3 +34,14 @@ models:
     # Config indicated by + and applies to all files under models/example/
     example:
       +materialized: view
+      
+vars:
+  # Parámetros Optimizados por Optuna - Swing Trading
+  steady_pred_threshold: 1.257
+  steady_rsi_threshold: 60
+  steady_range_threshold: 0.515
+  volatile_pred_threshold: 0.424
+  volatile_rsi_threshold: 54
+  volatile_range_threshold: 0.296
+  exit_ai_threshold: 0.466
+  stop_loss_atr_mult: 3.5
