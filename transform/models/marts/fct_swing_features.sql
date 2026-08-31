@@ -32,10 +32,10 @@ select
     ra.z_score_24,       
     ra.range_pos_48h,    
     
-    -- ---> LO NUEVO PARA LA SALIDA DINÁMICA DE FLINK <---
-    -- Necesitamos el valor en dólares (o USDT) del techo y piso para las órdenes Limit
-    ra.max_price_48h,    -- El precio exacto del techo (Trigger Take Profit)
-    ra.min_price_48h,    -- El precio exacto del piso 
+    -- Sin consumidor tras borrar fct_active_trade_limits.sql (N1 del plan de
+    -- cierre) — antes alimentaba su trigger_take_profit. Pendiente de N2.
+    ra.max_price_48h,    -- El precio exacto del techo
+    ra.min_price_48h,    -- El precio exacto del piso
     
     -- 5. Otros
     vol.rvol_20,
