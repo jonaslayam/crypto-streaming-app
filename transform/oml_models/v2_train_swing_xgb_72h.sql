@@ -27,13 +27,20 @@ COMMIT;
 BEGIN
     BEGIN DBMS_DATA_MINING.DROP_MODEL('SWING_XGB_72H_V2'); EXCEPTION WHEN OTHERS THEN NULL; END;
 
+    -- data_table_name/settings_table_name SIN calificar por schema:
+    -- DBMS_DATA_MINING.CREATE_MODEL no parsea el "esquema.tabla" como SQL
+    -- normal -- trata todo el string como un solo identificador dentro
+    -- del schema actual, y con el prefijo puesto busca literalmente
+    -- DBT_ANALYTICS."DBT_ANALYTICS.ML_TRAIN_DATA" (ORA-00942). Verificado
+    -- corriendo este bloque contra una ADW real conectado como
+    -- DBT_ANALYTICS: con el prefijo falla, sin él entrena bien.
     DBMS_DATA_MINING.CREATE_MODEL(
         model_name          => 'SWING_XGB_72H_V2',
         mining_function     => DBMS_DATA_MINING.REGRESSION,
-        data_table_name     => 'DBT_ANALYTICS.ML_TRAIN_DATA',
+        data_table_name     => 'ML_TRAIN_DATA',
         case_id_column_name => 'TIMESTAMP_CLT',
         target_column_name  => 'TARGET_RETURN_72H', -- <--- CAMBIO CLAVE: Ahora miramos a 3 días
-        settings_table_name => 'DBT_ANALYTICS.ML_XGB_SETTINGS_72H'
+        settings_table_name => 'ML_XGB_SETTINGS_72H'
     );
 END;
 /
