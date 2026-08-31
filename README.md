@@ -1,5 +1,7 @@
 # crypto-streaming-app
 
+[![CI](https://github.com/jonaslayam/crypto-streaming-app/actions/workflows/ci.yml/badge.svg)](https://github.com/jonaslayam/crypto-streaming-app/actions/workflows/ci.yml)
+
 A real-time crypto market data pipeline (Binance → Redpanda → Oracle Autonomous Data Warehouse → dbt → Oracle ML) built to evaluate swing-trading opportunities on a days-to-weeks horizon — not high-frequency trading.
 
 This README is written in three parts most portfolio projects skip: what it does, how to run it, and — the part that matters most — what I found wrong with it, how I found it, and how I fixed it. That last section is not an afterthought; it's the actual point of this repository.
@@ -56,6 +58,13 @@ To run the honest backtest (no Oracle connection needed — it reads a CSV expor
 python optimization/extract_data.py     # dumps fct_swing_features to optimization/data/crypto_history.csv
 python -m backtest --dry-run            # sanity-checks the engine's mechanics
 python -m backtest --report             # the real thing: IC, corrected t-stat, buy&hold benchmark
+```
+
+To run the test suite (no Oracle or Redis connection needed — Redis is faked, Oracle is mocked at the client boundary):
+
+```bash
+pip install -r requirements-dev.txt -r producer/requirements.txt -r backtest/requirements.txt
+pytest
 ```
 
 ## What I found, and how I tested it

@@ -13,7 +13,7 @@ class RedisState:
     async def close(self):
         """Cierra la conexión con Redis de forma segura."""
         logger.info("Cerrando conexión con Redis...")
-        await self.client.close()
+        await self.client.aclose()
         await self._redis_pool.disconnect()
         logger.info("✅ Conexión con Redis cerrada.")
 

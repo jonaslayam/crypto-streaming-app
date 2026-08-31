@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+testpaths = ["producer/tests", "database/tests", "backtest/tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+exclude = ["archive", ".venv", "target"]
+
+[tool.ruff.lint]
+# Kept intentionally light for this project: catch real bugs (unused
+# imports/names, undefined names) without relitigating every existing
+# file's style.
+select = ["E9", "F"]
