@@ -36,7 +36,12 @@ models:
       +materialized: view
       
 vars:
-  # Parámetros Optimizados por Optuna - Swing Trading
+  # ⚠️ PENDIENTE (N2 del plan de cierre): estos 8 valores salieron de
+  # archive/optimize_swing.py, que tiene lookahead bias (ver docstring
+  # de ese archivo). No representan ningún umbral validado. Se mantienen
+  # aquí solo porque fct_trading_signals.sql todavía los referencia y
+  # dbt no compila si desaparecen; deben reemplazarse (o marcarse como
+  # placeholder explícito) cuando se corrija esa fuga.
   steady_pred_threshold: 1.257
   steady_rsi_threshold: 60
   steady_range_threshold: 0.515

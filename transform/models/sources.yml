@@ -1,26 +1,8 @@
 version: 2
 
 sources:
-  # 1. Tu ingesta original de velas (Histórico/Batch)
+  # Ingesta de velas (Histórico/Batch + streaming en vivo vía processor/)
   - name: binance_raw
     schema: TRADER_DATA
     tables:
       - name: CRYPTO_CANDLES_1H
-
-  # 2. La nueva ingesta de operaciones reales (Streaming/Flink)
-  - name: exchange_api
-    schema: TRADER_DATA 
-    tables:
-      - name: raw_executed_trades
-        description: "Registro de operaciones cerradas en vivo por Flink"
-        columns:
-          - name: symbol
-            tests:
-              - not_null
-          - name: entry_time
-            tests:
-              - not_null
-          - name: exit_time
-          - name: exit_price
-          - name: action
-          - name: trigger_reason
