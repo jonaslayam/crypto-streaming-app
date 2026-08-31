@@ -1,3 +1,23 @@
+"""
+ARCHIVADO — no ejecutar, no usar sus resultados.
+
+Este script tiene lookahead bias real: la línea 12 (comentada como "asumimos")
+asigna la variable de predicción directamente al target realizado a 72h
+(df['pred_72h'] = df['TARGET_RETURN_72H']), es decir que "predice" el futuro
+usando el futuro. Los 8 parámetros que Optuna encontró con esto están, o
+estuvieron, copiados en transform/dbt_project.yml y no tienen validez alguna.
+
+Segundo bug independiente en simulate_trades(): el CSV de entrada está
+ordenado por TIMESTAMP, así que las 10 monedas se intercalan fila a fila.
+La condición `if symbols[i] != current_symbol` cierra la posición como
+"fantasma" (sin registrar P&L) cada vez que cambia el símbolo — es decir,
+en ~99% de las filas consecutivas. El resultado es que este backtest casi
+nunca contabiliza una salida real.
+
+Se conserva en el repo como evidencia y contexto del hallazgo documentado
+en el README, no como código de referencia para reconstruir la estrategia.
+"""
+
 import optuna
 import pandas as pd
 import numpy as np

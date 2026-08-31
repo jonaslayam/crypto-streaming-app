@@ -59,8 +59,10 @@ select
     -- 4. RANGE POSITION 48H (Proximidad al mínimo/máximo)
     round((CLOSE_PRICE - min_48h) / NULLIF(max_48h - min_48h, 0), 4) as range_pos_48h,
     
-    -- ---> LO QUE FALTABA: Exponer los precios absolutos para Flink <---
-    -- Les ponemos el alias exacto que fct_swing_features está esperando
+    -- Precio exacto de techo/piso de la ventana de 48h.
+    -- Sin consumidor tras borrar fct_active_trade_limits.sql (N1 del plan de
+    -- cierre) — antes alimentaba su trigger_take_profit. Pendiente de N2:
+    -- decidir si se mantienen al curar la lista de features.
     max_48h as max_price_48h,
     min_48h as min_price_48h
 
