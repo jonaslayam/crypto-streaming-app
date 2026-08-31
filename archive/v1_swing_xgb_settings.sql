@@ -1,4 +1,17 @@
-v1_swing_xgb_settings
+-- ARCHIVADO — no ejecutar.
+--
+-- Entrena SWING_XGB_24H_V1, el modelo superado por SWING_XGB_72H_V2
+-- (ver transform/oml_models/v2_train_swing_xgb_72h.sql, el que de verdad
+-- usa producción). Este script además dejó de ser ejecutable durante la
+-- limpieza de portafolio (N2): apunta a TARGET_RETURN_24H como
+-- target_column_name, columna que ml_train_data.sql ya no expone —fue
+-- retirada a propósito junto con TARGET_RETURN_168H, porque dejarla en la
+-- misma tabla de entrenamiento del modelo de 72h la convertía en un
+-- predictor con fuga (corr 72h-24h = 0.576 según la auditoría).
+--
+-- Se conserva como registro de que existió un V1, no como script a correr.
+
+-- v1_swing_xgb_settings
 BEGIN
    EXECUTE IMMEDIATE 'DROP TABLE DBT_ANALYTICS.ML_XGB_SETTINGS';
 EXCEPTION
