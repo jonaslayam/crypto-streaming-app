@@ -1,12 +1,13 @@
-"""Arnés de validación honesto para la estrategia de swing trading.
+"""Honest validation harness for the swing trading strategy.
 
-Reemplaza a optimization/optimize_swing.py (ver archive/optimize_swing.py
-para el detalle de por qué ese script no sirve: lookahead bias real en
-`pred_72h`, y un bug de posiciones huérfanas que descartaba silenciosamente
-el 99% de las salidas). Este paquete existe para que un resultado positivo
-o negativo se pueda confiar, no para que la estrategia "gane" el backtest.
+Replaces the role optimization/optimize_swing.py used to play (see
+archive/optimize_swing.py for why that script is unusable: real
+lookahead bias in `pred_72h`, plus an orphaned-position bug that
+silently dropped ~99% of the exits). This package exists so a positive
+or negative result can be trusted, not so the strategy "wins" the
+backtest.
 
-Uso:
+Usage:
     python -m backtest --dry-run
     python -m backtest --report
 """

@@ -1,9 +1,9 @@
-"""Carga de datos para el backtest.
+"""Data loading for the backtest.
 
-Lee el mismo CSV que produce optimization/extract_data.py (un dump de
-FCT_SWING_FEATURES). No asume nada sobre el orden de las filas -- las
-agrupa por SYMBOL explícitamente, que es justo lo que optimize_swing.py
-no hacía y por qué perdía el 99% de sus salidas (ver
+Reads the same CSV that optimization/extract_data.py produces (a dump
+of FCT_SWING_FEATURES). Makes no assumption about row ordering -- it
+groups by SYMBOL explicitly, which is exactly what optimize_swing.py
+did not do and why it lost ~99% of its exits (see
 archive/optimize_swing.py).
 """
 from __future__ import annotations
@@ -18,10 +18,11 @@ class InsufficientDataError(RuntimeError):
 
 
 def load_symbol_frames(csv_path: str, horizon_hours: int) -> dict[str, pd.DataFrame]:
-    """Devuelve {symbol: DataFrame} ordenado por tiempo, uno por símbolo.
+    """Returns {symbol: DataFrame}, sorted by time, one per symbol.
 
-    Cada símbolo se procesa de forma completamente independiente en todo
-    el paquete -- nunca hay un índice global que salte entre monedas.
+    Every symbol is processed completely independently throughout the
+    whole package -- there is never a global index that jumps between
+    coins.
     """
     target_col = f"TARGET_RETURN_{horizon_hours}H"
     needed = ["SYMBOL", "TIMESTAMP_CLT", target_col] + PREDICTOR_COLUMNS + EXECUTION_COLUMNS
@@ -30,8 +31,8 @@ def load_symbol_frames(csv_path: str, horizon_hours: int) -> dict[str, pd.DataFr
     missing = [c for c in needed if c not in df.columns]
     if missing:
         raise InsufficientDataError(
-            f"Al CSV le faltan columnas requeridas: {missing}. "
-            f"¿Se generó con optimization/extract_data.py contra el esquema actual?"
+            f"CSV is missing required columns: {missing}. "
+            f"Was it generated with optimization/extract_data.py against the current schema?"
         )
 
     df["TIMESTAMP_CLT"] = pd.to_datetime(df["TIMESTAMP_CLT"])
@@ -39,13 +40,13 @@ def load_symbol_frames(csv_path: str, horizon_hours: int) -> dict[str, pd.DataFr
     frames: dict[str, pd.DataFrame] = {}
     for symbol, g in df.groupby("SYMBOL", sort=False):
         g = g.sort_values("TIMESTAMP_CLT").reset_index(drop=True)
-        # Filas sin predictores completos (warmup de indicadores) no sirven
-        # ni para entrenar ni para operar.
+        # Rows without complete predictors (indicator warmup) are
+        # useless both for training and for trading.
         g = g.dropna(subset=PREDICTOR_COLUMNS + EXECUTION_COLUMNS)
         if len(g) > 0:
             frames[symbol] = g
 
     if not frames:
-        raise InsufficientDataError("No quedó ningún símbolo con datos utilizables tras el filtrado.")
+        raise InsufficientDataError("No symbol had usable data left after filtering.")
 
     return frames

@@ -18,8 +18,8 @@ def test_folds_are_contiguous_and_expanding():
     folds = make_folds(ts, n_folds=4, horizon_hours=72)
     assert len(folds) == 3
     for a, b in zip(folds, folds[1:]):
-        assert a.test_end == b.test_start  # sin huecos ni superposición
-        assert b.train_end > a.train_end   # la ventana de train crece
+        assert a.test_end == b.test_start  # no gaps, no overlap
+        assert b.train_end > a.train_end   # the training window grows
 
 
 def test_purge_window_matches_horizon():
@@ -41,9 +41,9 @@ def test_split_frame_excludes_purged_rows_from_train():
     )
     train, test = split_frame(df, fold)
 
-    # Ninguna fila de train debe caer dentro de la ventana purgada: su
-    # target a `horizon` horas hacia adelante se metería en el test.
+    # No training row can fall inside the purged window: its target
+    # `horizon` hours ahead would land inside the test set.
     assert (train["TIMESTAMP_CLT"] < fold.purge_start).all()
     assert ((test["TIMESTAMP_CLT"] >= fold.test_start) & (test["TIMESTAMP_CLT"] < fold.test_end)).all()
-    # Train y test no comparten ninguna fila.
+    # Train and test share no row.
     assert set(train.index).isdisjoint(test.index)
