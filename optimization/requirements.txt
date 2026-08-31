@@ -1,6 +1,4 @@
-optuna==4.8.0
 pandas==3.0.2
 numpy==2.4.4
 oracledb==3.4.2
-SQLAlchemy==2.0.49
 python-dotenv==1.1.0
