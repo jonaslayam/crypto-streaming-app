@@ -1,16 +1,16 @@
-"""Lista de columnas predictoras.
+"""Predictor column list.
 
-Debe coincidir exactamente con predictor_columns() en
-transform/macros/feature_set.sql -- ese macro es la fuente de verdad para
-lo que el modelo de producción usa como features; esta lista es su espejo
-en Python para que el backtest evalúe la misma información que el modelo
-real, ni más ni menos. Si una diverge de la otra, este backtest deja de
-medir la estrategia real.
+Must match predictor_columns() in transform/macros/feature_set.sql
+exactly -- that macro is the source of truth for what the production
+model uses as features; this list is its Python mirror so the backtest
+evaluates the same information the real model sees, no more, no less.
+If one drifts from the other, this backtest stops measuring the real
+strategy.
 
-Deliberadamente EXCLUIDOS (ver el macro de dbt para el detalle completo):
-TARGET_RETURN_* salvo el target de entrenamiento, y los niveles absolutos
-de precio/volumen (CLOSE_PRICE, VOLUME, SMA_*, ATR_14, BB_*, STDDEV_20,
-MAX_PRICE_48H, MIN_PRICE_48H) -- no estacionarios entre símbolos.
+Deliberately EXCLUDED (see the dbt macro for the full rationale):
+TARGET_RETURN_* except the training target, and absolute price/volume
+levels (CLOSE_PRICE, VOLUME, SMA_*, ATR_14, BB_*, STDDEV_20,
+MAX_PRICE_48H, MIN_PRICE_48H) -- not stationary across symbols.
 """
 
 PREDICTOR_COLUMNS = [
@@ -22,8 +22,8 @@ PREDICTOR_COLUMNS = [
     "RVOL_20",
 ]
 
-# Columnas que el motor de ejecución sí necesita fuera del modelo (precio y
-# ATR para el stop-loss). No se le pasan al modelo como predictores.
+# Columns the execution engine needs outside the model (price and ATR
+# for the stop-loss). Never passed to the model as predictors.
 EXECUTION_COLUMNS = ["CLOSE_PRICE", "ATR_14"]
 
 TARGET_COLUMN_TEMPLATE = "TARGET_RETURN_{h}H"

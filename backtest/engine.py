@@ -1,11 +1,10 @@
-"""Motor de simulación: entrena por fold, opera por símbolo.
+"""Simulation engine: trains per fold, trades per symbol.
 
-Corrección estructural del bug de optimize_swing.py: acá cada símbolo se
-recorre en su propio bucle, con su propio estado de posición. Es
-imposible que una entrada de BTCUSDT se cierre "fantasma" porque la fila
-siguiente del CSV pertenecía a ETHUSDT -- ese salto entre símbolos
-simplemente no existe en esta estructura, porque nunca hay un único
-índice compartido entre monedas.
+Structural fix for the optimize_swing.py bug: here every symbol runs
+through its own loop, with its own position state. It's impossible for
+a BTCUSDT entry to be closed as a "ghost" because the next CSV row
+belonged to ETHUSDT -- that cross-symbol jump simply doesn't exist in
+this structure, since there is never a single index shared between coins.
 """
 from __future__ import annotations
 
@@ -33,7 +32,7 @@ class Trade:
         return self.exit_time is not None
 
     def net_return(self, fee_bps: float) -> float | None:
-        """Retorno neto de comisiones (0.1%/lado = 10 bps por defecto)."""
+        """Return net of fees (0.1%/side = 10 bps by default)."""
         if not self.is_closed:
             return None
         gross = (self.exit_price - self.entry_price) / self.entry_price
@@ -57,6 +56,12 @@ class FoldReport:
     n_train: int
     n_test: int
     trades: list[Trade] = field(default_factory=list)
+    # Prediction vs. real target for EVERY test row, not just the ones
+    # that triggered an entry -- N4 uses these for the Information
+    # Coefficient, which measures the model's raw predictive power, not
+    # the entry rule sitting on top of it.
+    test_preds: "pd.Series | None" = None
+    test_actuals: "pd.Series | None" = None
 
 
 @dataclass
@@ -75,8 +80,8 @@ class BacktestResult:
 
     @property
     def n_abandoned(self) -> int:
-        """Debe ser siempre 0 -- una posición abierta y nunca cerrada es
-        exactamente el bug que este paquete existe para no repetir."""
+        """Must always be 0 -- an open position that never closes is
+        exactly the bug this package exists to not repeat."""
         return self.n_opened - self.n_closed
 
 
@@ -114,9 +119,13 @@ class BacktestEngine:
             model.fit(train_all[PREDICTOR_COLUMNS].to_numpy(), train_all[target_col].to_numpy())
 
             fold_trades: list[Trade] = []
+            fold_preds: list[float] = []
+            fold_actuals: list[float] = []
             for symbol, test in test_parts.items():
                 preds = model.predict(test[PREDICTOR_COLUMNS].to_numpy())
                 fold_trades.extend(self._simulate_symbol(symbol, test, preds))
+                fold_preds.extend(preds)
+                fold_actuals.extend(test[target_col].to_numpy())
 
             all_trades.extend(fold_trades)
             fold_reports.append(FoldReport(
@@ -124,6 +133,8 @@ class BacktestEngine:
                 n_train=len(train_all),
                 n_test=sum(len(t) for t in test_parts.values()),
                 trades=fold_trades,
+                test_preds=pd.Series(fold_preds),
+                test_actuals=pd.Series(fold_actuals),
             ))
 
         return BacktestResult(trades=all_trades, folds=fold_reports, config=cfg)
@@ -143,8 +154,9 @@ class BacktestEngine:
         while i < n:
             if open_trade is None:
                 if preds[i] > cfg.entry_threshold:
-                    # Ejecución en la vela SIGUIENTE a la señal, nunca en la
-                    # propia -- la señal en i solo se conoce al cierre de i.
+                    # Entry executes on the NEXT candle after the signal,
+                    # never the signal's own -- the signal at i is only
+                    # known at i's close.
                     entry_idx = i + 1
                     if entry_idx >= n:
                         break
@@ -175,9 +187,9 @@ class BacktestEngine:
                 open_trade = None
             i += 1
 
-        # Una posición que sigue abierta al llegar al final de los datos
-        # disponibles se cierra explícitamente al último precio conocido,
-        # con su motivo marcado -- nunca se descarta en silencio.
+        # A position still open when we run out of available data gets
+        # closed explicitly at the last known price, with its reason
+        # marked -- it is never dropped silently.
         if open_trade is not None:
             open_trade.exit_time = pd.Timestamp(times[-1])
             open_trade.exit_price = float(prices[-1])

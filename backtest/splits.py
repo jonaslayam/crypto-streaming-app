@@ -1,17 +1,17 @@
-"""Walk-forward purgado con embargo.
+"""Purged walk-forward with embargo.
 
-La auditoría encontró que ml_train_data.sql/ml_test_data.sql partían los
-datos con un simple corte de fecha (< hoy-90 / >= hoy-90) sin purgar la
-frontera -- una fila de entrenamiento cuyo target mira 72h hacia adelante
-puede "ver" datos que ya caen dentro del período de test. Acá se corrige:
-toda fila de train cuya ventana de 72h se meta en el test se descarta
-(purge), y además se deja un colchón después del test antes de que
-empiece el siguiente fold de train (embargo) para no reusar la misma
-contaminación en folds sucesivos.
+The audit found that ml_train_data.sql/ml_test_data.sql split the data
+with a simple date cut (< today-90 / >= today-90) without purging the
+boundary -- a training row whose target looks 72h into the future can
+"see" data that already falls inside the test period. This module
+fixes that: every training row whose 72h window would overlap the test
+period gets dropped (purge), and a buffer is left after the test period
+before the next fold's training window starts (embargo) so the same
+contamination doesn't get reused across folds.
 
-El split es por CALENDARIO, no por símbolo: los folds se calculan sobre el
-rango de fechas combinado de todos los símbolos, así que cada fold
-evalúa el mismo período para todas las monedas a la vez.
+The split is done by CALENDAR time, not per symbol: fold boundaries are
+computed over the combined date range of every symbol, so each fold
+evaluates the same period across all coins at once.
 """
 from __future__ import annotations
 
@@ -24,10 +24,10 @@ import pandas as pd
 @dataclass(frozen=True)
 class Fold:
     index: int
-    train_end: pd.Timestamp        # exclusivo
-    purge_start: pd.Timestamp      # inicio de la zona purgada (= train_end - horizonte)
-    test_start: pd.Timestamp       # inclusivo
-    test_end: pd.Timestamp         # exclusivo
+    train_end: pd.Timestamp        # exclusive
+    purge_start: pd.Timestamp      # start of the purged zone (= train_end - horizon)
+    test_start: pd.Timestamp       # inclusive
+    test_end: pd.Timestamp         # exclusive
 
 
 def make_folds(
@@ -35,18 +35,18 @@ def make_folds(
     n_folds: int,
     horizon_hours: int,
 ) -> list[Fold]:
-    """Walk-forward de ventana expansiva: fold i entrena con todo lo
-    anterior al bloque i, evalúa sobre el bloque i.
+    """Expanding-window walk-forward: fold i trains on everything before
+    block i, tests on block i.
 
-    El embargo no es un parámetro aparte: en una ventana expansiva, cada
-    fold recalcula su propio `purge_start` como `test_start - horizonte`,
-    y esa purga se aplica de nuevo en el fold siguiente sobre ese mismo
-    tramo (que para entonces ya es train). Eso ya cumple el rol del
-    embargo -- ningún fold entrena jamás con una fila cuyo target mire
-    hacia dentro de SU PROPIO período de test.
+    Embargo is not a separate parameter: in an expanding window, each
+    fold recomputes its own `purge_start` as `test_start - horizon`, and
+    that same purge gets reapplied in the following fold over that same
+    stretch (which by then is training data). That already does the job
+    an embargo would -- no fold ever trains on a row whose target looks
+    into ITS OWN test period.
     """
     if n_folds < 2:
-        raise ValueError("n_folds debe ser >= 2 (al menos un fold de train y uno de test)")
+        raise ValueError("n_folds must be >= 2 (at least one train fold and one test fold)")
 
     ts_min = all_timestamps.min()
     ts_max = all_timestamps.max()
@@ -69,7 +69,7 @@ def make_folds(
 
 
 def split_frame(df: pd.DataFrame, fold: Fold) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Aplica un Fold a un DataFrame de un símbolo. Devuelve (train, test)."""
+    """Applies a Fold to a single symbol's DataFrame. Returns (train, test)."""
     ts = df["TIMESTAMP_CLT"]
     train_mask = ts < fold.purge_start
     test_mask = (ts >= fold.test_start) & (ts < fold.test_end)
