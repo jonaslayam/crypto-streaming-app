@@ -44,13 +44,15 @@ docker compose up -d   # redpanda, console, redis, producer, processor
 
 The producer runs the live WebSocket stream and the 2-year backfill concurrently on first start; subsequent starts only fill whatever gap accumulated while it was down.
 
+On a fresh Oracle instance, run `database/scripts/01_setup_user.sql` through `03_setup_dbt_user.sql` as `ADMIN` first — they create the `TRADER_DATA` (raw ingestion) and `DBT_ANALYTICS` (dbt + OML) schemas dbt and the pipeline connect as, and grant `DBT_ANALYTICS` read access to `TRADER_DATA`'s candle table.
+
 To build the dbt models and train the model, from `transform/`:
 
 ```bash
 dbt run
 ```
 
-(a `profiles.yml` pointing at your own Oracle schema is required and is not included — see `.env.example` for the connection fields it needs)
+(a `profiles.yml` pointing at the `DBT_ANALYTICS` schema is required and is not included — see `.env.example` for the connection fields it needs)
 
 To run the honest backtest (no Oracle connection needed — it reads a CSV export):
 
