@@ -1,3 +1,8 @@
+-- ARCHIVADO — no ejecutar. Depende de TARGET_RETURN_24H, que ya no existe
+-- en ML_TEST_DATA (ver nota en archive/v1_swing_xgb_settings.sql). Evalúa
+-- SWING_XGB_24H_V1, superado por SWING_XGB_72H_V2. Se conserva solo como
+-- referencia histórica.
+--
 -- =========================================================================
 -- EVALUACIÓN DE RENDIMIENTO: Swing Trading XGBoost V1
 -- =========================================================================
