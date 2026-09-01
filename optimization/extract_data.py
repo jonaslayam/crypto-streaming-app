@@ -1,7 +1,6 @@
 import sys
 import os
 import warnings
-import oracledb
 
 # 1. Silenciamos advertencias
 warnings.filterwarnings('ignore', category=UserWarning)

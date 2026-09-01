@@ -25,7 +25,7 @@ class OracleManager:
                 increment=1,
                 ping_interval=10
             )
-            logging.info(f"✅ Oracle Connection Pool inicializado (Mín: 2, Máx: 5).")
+            logging.info("✅ Oracle Connection Pool inicializado (Mín: 2, Máx: 5).")
         except oracledb.Error as e:
             logging.error(f"❌ Error crítico al crear el Pool de Oracle: {e}")
             raise
